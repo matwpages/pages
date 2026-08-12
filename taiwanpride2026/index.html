@@ -797,11 +797,11 @@
     <div class="admin-content" id="admin-content" style="display:none;">
       <div class="admin-banner">
         <span class="ic">🔧</span>
-        <span data-i18n="admin_banner_text">此分頁尚未接上真實資料來源。等你提供後台資料表（例如 Google Sheet 或 Google Apps Script API）之後，下方欄位就能實際串接並自動運算。</span>
+        <span data-i18n="admin_banner_text">此後台已接上 Google Sheet 後端，報名和匯款表單送出的資料會自動寫入試算表，下方表格與試算表裡的「對帳總表」分頁會同步顯示自動核對後的結果。</span>
       </div>
 
       <div class="admin-logic">
-        <h4 data-i18n="admin_logic_title">自動對帳邏輯（設計草案）</h4>
+        <h4 data-i18n="admin_logic_title">自動對帳邏輯</h4>
         <ol>
           <li data-i18n="admin_logic_1">報名表與匯款回報表都收「聯絡電話」，系統以電話做為配對鍵，把兩張表自動連起來</li>
           <li data-i18n="admin_logic_2">應付金額 = （攜伴人數 + 1）× NT$1,200，由報名資料自動算出</li>
@@ -933,8 +933,8 @@
     admin_gate_error:{en:'Incorrect password — please try again'},
     admin_refresh_btn:{en:'🔄 Refresh Data'},
     admin_loading:{en:'Loading…'}, admin_no_data:{en:'No registrations yet'},
-    admin_banner_text:{en:'This is currently using test storage (only active in this preview environment) — data from the registration and payment forms will appear below in real time. Once you have a real backend data sheet (e.g. Google Sheet / Google Apps Script API), this can be swapped for the real data source.'},
-    admin_logic_title:{en:'Auto-reconciliation logic (draft)'},
+    admin_banner_text:{en:'This admin panel is connected to the Google Sheet backend — data from the registration and payment forms is saved automatically, and the table below (along with the "對帳總表" tab in the spreadsheet) shows the auto-reconciled results in sync.'},
+    admin_logic_title:{en:'Auto-Reconciliation Logic'},
     admin_logic_1:{en:'Both the registration form and the transfer report collect "phone number" — the system uses phone number as the matching key to link the two sheets'},
     admin_logic_2:{en:'Amount due = (number of plus-ones + 1) × NT$1,200, calculated automatically from registration data'},
     admin_logic_3:{en:'When a transfer report comes in, the system checks whether the reported amount matches the amount due: if it matches → auto-flag as "Verified"; if it doesn\'t match or no matching phone number is found → flag as "Needs manual review" for staff to handle'},
