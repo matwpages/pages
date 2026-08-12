@@ -385,6 +385,10 @@
   .admin-logic ol{margin:0; padding-left:18px;}
   .admin-logic li{margin-bottom:6px; color:var(--text-light);}
   .table-scroll{overflow-x:auto;}
+  .admin-toolbar{
+    display:flex; align-items:center; gap:14px; margin-bottom:14px; flex-wrap:wrap;
+  }
+  .admin-toolbar .btn-secondary{padding:10px 16px;}
   table.admin-table{width:100%; min-width:900px; border-collapse:collapse; background:var(--bg-surface); border:1px solid var(--line); border-radius:var(--radius); overflow:hidden;}
   table.admin-table th, table.admin-table td{padding:12px 14px; text-align:left; border-bottom:1px solid var(--line); font-size:0.82rem; white-space:nowrap;}
   table.admin-table th{color:var(--text-muted); text-transform:uppercase; font-size:0.68rem; letter-spacing:0.5px;}
@@ -807,6 +811,11 @@
         </ol>
       </div>
 
+      <div class="admin-toolbar">
+        <button type="button" class="btn-secondary" id="admin-refresh-btn" data-i18n="admin_refresh_btn">🔄 更新資料</button>
+        <span class="hint" id="admin-last-updated"></span>
+      </div>
+
       <div class="table-scroll">
         <table class="admin-table">
           <thead>
@@ -920,6 +929,7 @@
     admin_title:{en:'Admin'}, admin_desc:{en:'Staff only — view registration and payment data.'},
     admin_gate_title:{en:'Staff Login'}, admin_gate_desc:{en:'Enter the password to view backend data'},
     admin_gate_ph:{en:'Enter password'}, admin_gate_btn:{en:'Log In'},
+    admin_refresh_btn:{en:'🔄 Refresh'},
     admin_gate_error:{en:'Incorrect password — please try again'},
     admin_refresh_btn:{en:'🔄 Refresh Data'},
     admin_loading:{en:'Loading…'}, admin_no_data:{en:'No registrations yet'},
@@ -1285,6 +1295,9 @@
   document.getElementById('admin-pw').addEventListener('keydown', (e)=>{
     if(e.key === 'Enter') tryUnlockAdmin();
   });
+  document.getElementById('admin-refresh-btn').addEventListener('click', ()=>{
+    if(GAS_URL) loadAdminData(ADMIN_PASSWORD);
+  });
 
   async function loadAdminData(password){
     const tbody = document.getElementById('admin-tbody');
@@ -1296,63 +1309,47 @@
         tbody.innerHTML = `<tr><td colspan="11" style="text-align:center; color:var(--red);">${currentLang==='en'?'Server rejected the request':'伺服器拒絕了這個請求'}</td></tr>`;
         return;
       }
-      const rows = data.registrations || [];
-      const payments = data.payments || [];
-      if(rows.length === 0){
+      const results = data.results || [];
+      if(results.length === 0){
         tbody.innerHTML = `<tr><td colspan="11" style="text-align:center; color:var(--text-muted);">${currentLang==='en'?'No registrations yet':'尚無報名資料'}</td></tr>`;
         return;
       }
 
-      // 每位攜伴在試算表裡是獨立一列，這裡依「報名編號」把同一組報名合併回一筆
-      const groups = {};
-      const order = [];
-      rows.forEach(r=>{
-        if(!groups[r.id]){ groups[r.id] = []; order.push(r.id); }
-        groups[r.id].push(r);
-      });
+      const statusLabels = {
+        '待現場收款': currentLang==='en' ? '🪑 Pay on-site' : '🪑 待現場收款',
+        '尚未回報匯款': currentLang==='en' ? '⏳ Awaiting transfer' : '⏳ 尚未回報匯款',
+        '已核對': currentLang==='en' ? '✅ Verified' : '✅ 已核對',
+        '待人工確認': currentLang==='en' ? '⚠️ Needs review' : '⚠️ 待人工確認'
+      };
 
       tbody.innerHTML = '';
-      order.forEach((regId)=>{
-        const group = groups[regId];
-        const primary = group.find(x=>x.role==='本人') || group[0];
-        const companions = group.filter(x=>x.role==='攜伴').map(x=>x.name).filter(Boolean);
-        const total = group.length;
-        const due = total * 1200;
-        const matched = payments.filter(p => p.phone === primary.phone);
-        const paidSum = matched.reduce((sum,p)=> sum + (Number(p.amount)||0), 0);
-
-        let status;
-        if(primary.paymethod === '現場付款'){
-          status = currentLang==='en' ? '🪑 Pay on-site' : '🪑 待現場收款';
-        } else if(matched.length === 0){
-          status = currentLang==='en' ? '⏳ Awaiting transfer' : '⏳ 尚未回報匯款';
-        } else if(paidSum === due){
-          status = currentLang==='en' ? '✅ Verified' : '✅ 已核對';
-        } else {
-          status = currentLang==='en' ? '⚠️ Needs review' : '⚠️ 待人工確認';
-        }
-
-        const tableWith = [primary.tableWithName, primary.tableWithIg, primary.tableWithPhone].filter(Boolean).join(' / ') || '—';
+      results.forEach((r)=>{
+        const companions = r.companions || [];
         const nameCell = companions.length
-          ? `${escapeHtml(primary.name)} <span style="color:var(--text-muted);">(+${escapeHtml(companions.join('、'))})</span>`
-          : escapeHtml(primary.name);
+          ? `${escapeHtml(r.name)} <span style="color:var(--text-muted);">(+${escapeHtml(companions.join('、'))})</span>`
+          : escapeHtml(r.name);
 
         const tr = document.createElement('tr');
         tr.innerHTML = `
-          <td>${escapeHtml(regId)}</td>
+          <td>${escapeHtml(r.regId)}</td>
           <td>${nameCell}</td>
-          <td>${escapeHtml(primary.phone)}</td>
-          <td>${companions.length}</td>
-          <td>${total}</td>
-          <td>NT$${due.toLocaleString()}</td>
-          <td>${escapeHtml(primary.paymethod)}</td>
-          <td>${matched.length ? 'NT$'+paidSum.toLocaleString() : '—'}</td>
-          <td>${status}</td>
-          <td>${escapeHtml(tableWith)}</td>
-          <td>${primary.igPublic === '是' ? (currentLang==='en'?'Yes':'是') : (currentLang==='en'?'No':'否')}</td>
+          <td>${escapeHtml(r.phone)}</td>
+          <td>${r.companionCount||0}</td>
+          <td>${r.total}</td>
+          <td>NT$${r.due.toLocaleString()}</td>
+          <td>${escapeHtml(r.paymethod)}</td>
+          <td>${r.matchedCount ? 'NT$'+r.paidSum.toLocaleString() : '—'}</td>
+          <td>${statusLabels[r.status] || escapeHtml(r.status)}</td>
+          <td>${escapeHtml(r.tableWith) || '—'}</td>
+          <td>${r.igPublic === '是' ? (currentLang==='en'?'Yes':'是') : (currentLang==='en'?'No':'否')}</td>
         `;
         tbody.appendChild(tr);
       });
+
+      const stamp = document.getElementById('admin-last-updated');
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString(currentLang==='en' ? 'en-US' : 'zh-TW', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+      stamp.textContent = (currentLang==='en' ? 'Last updated: ' : '最後更新：') + timeStr;
     }catch(err){
       tbody.innerHTML = `<tr><td colspan="11" style="text-align:center; color:var(--red);">${currentLang==='en'?'Failed to load data':'資料載入失敗'}</td></tr>`;
     }
