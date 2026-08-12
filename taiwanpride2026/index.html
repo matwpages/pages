@@ -220,8 +220,20 @@
     background:rgba(155,93,229,0.08); border-radius:0 10px 10px 0;
   }
   .guest-section > label{font-size:0.9rem; font-weight:600; display:block; margin-bottom:10px;}
-  .guest-row{display:grid; grid-template-columns:1fr auto; gap:10px; align-items:end; margin-bottom:10px;}
-  .guest-row .field{margin-bottom:0;}
+  .guest-row{
+    border:1px solid var(--line); border-radius:10px; padding:12px 14px; margin-bottom:10px;
+    background:rgba(255,255,255,0.03);
+  }
+  .guest-row-top{display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;}
+  .guest-row-top label{font-size:0.85rem; color:var(--text-muted); font-weight:600;}
+  .guest-row-fields{display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px;}
+  @media(max-width:520px){.guest-row-fields{grid-template-columns:1fr;}}
+  .guest-row-fields input{
+    width:100%; padding:10px 12px;
+    background:var(--bg-deep); border:1px solid var(--line); border-radius:8px;
+    color:var(--text-light); font-family:'Inter'; font-size:0.9rem;
+  }
+  .guest-row-fields input:focus{ outline:2px solid var(--purple); outline-offset:1px; border-color:var(--purple); }
 
   .subtotal-card{
     display:flex; justify-content:space-between; align-items:center;
@@ -1041,9 +1053,15 @@
   }
   function renumberGuests(){
     guestRowsContainer.querySelectorAll('.guest-row').forEach((row,i)=>{
-      row.querySelector('label').textContent = guestLabelText(i+1);
+      row.querySelector('.guest-row-top label').textContent = guestLabelText(i+1);
       row.querySelector('.remove-guest-btn').textContent = removeLabelText();
     });
+  }
+  function guestFieldPh(kind){
+    if(currentLang === 'en'){
+      return kind==='name' ? 'Name' : kind==='country' ? 'Country' : 'IG (optional)';
+    }
+    return kind==='name' ? '姓名' : kind==='country' ? '國籍' : 'IG（選填）';
   }
   function addGuestRow(){
     if(guestCount >= maxGuests) return;
@@ -1051,11 +1069,15 @@
     const row = document.createElement('div');
     row.className = 'guest-row';
     row.innerHTML = `
-      <div class="field">
+      <div class="guest-row-top">
         <label>${guestLabelText(guestCount)}</label>
-        <input type="text" class="guest-name-input">
+        <button type="button" class="btn-secondary remove-guest-btn">${removeLabelText()}</button>
       </div>
-      <button type="button" class="btn-secondary remove-guest-btn">${removeLabelText()}</button>
+      <div class="guest-row-fields">
+        <input type="text" class="guest-name-input" placeholder="${guestFieldPh('name')}">
+        <input type="text" class="guest-country-input" placeholder="${guestFieldPh('country')}">
+        <input type="text" class="guest-ig-input" placeholder="${guestFieldPh('ig')}">
+      </div>
     `;
     guestRowsContainer.appendChild(row);
     row.querySelector('.remove-guest-btn').addEventListener('click', ()=>{
@@ -1132,8 +1154,11 @@
     }
     errorEl.classList.remove('show');
 
-    const guestNames = Array.from(guestRowsContainer.querySelectorAll('.guest-name-input'))
-      .map(i=>i.value.trim()).filter(Boolean);
+    const guests = Array.from(guestRowsContainer.querySelectorAll('.guest-row')).map(row=>({
+      name: row.querySelector('.guest-name-input').value.trim(),
+      country: row.querySelector('.guest-country-input').value.trim(),
+      ig: row.querySelector('.guest-ig-input').value.trim()
+    })).filter(g => g.name); // 至少要有姓名才算一筆有效攜伴
     const payload = {
       type: 'registration',
       id: 'reg-' + Date.now() + '-' + Math.random().toString(36).slice(2,7),
@@ -1144,7 +1169,7 @@
       ig: document.getElementById('su-ig').value.trim(),
       igPublic: document.getElementById('su-ig-public').checked,
       guestCount: guestCount,
-      guestNames: guestNames,
+      guests: guests,
       notes: document.getElementById('su-notes').value.trim(),
       tableWithName: document.getElementById('su-tablewith-name').value.trim(),
       tableWithIg: document.getElementById('su-tablewith-ig').value.trim(),
@@ -1204,7 +1229,7 @@
       const res = await fetch(`${GAS_URL}?action=lookup&phone=${encodeURIComponent(phone)}`);
       const data = await res.json();
       if(data.found){
-        const total = (Number(data.guestCount)||0) + 1;
+        const total = Number(data.totalCount) || 1;
         msg.textContent = currentLang === 'en'
           ? `✅ Found — ${data.name}, party of ${total}, payment: ${data.paymethod === '現場付款' ? 'on-site' : 'online'}.`
           : `✅ 查到囉 — ${data.name}，共 ${total} 人，付款方式：${data.paymethod}。`;
@@ -1254,20 +1279,33 @@
         tbody.innerHTML = `<tr><td colspan="11" style="text-align:center; color:var(--red);">${currentLang==='en'?'Server rejected the request':'伺服器拒絕了這個請求'}</td></tr>`;
         return;
       }
-      const registrations = data.registrations || [];
+      const rows = data.registrations || [];
       const payments = data.payments || [];
-      if(registrations.length === 0){
+      if(rows.length === 0){
         tbody.innerHTML = `<tr><td colspan="11" style="text-align:center; color:var(--text-muted);">${currentLang==='en'?'No registrations yet':'尚無報名資料'}</td></tr>`;
         return;
       }
+
+      // 每位攜伴在試算表裡是獨立一列，這裡依「報名編號」把同一組報名合併回一筆
+      const groups = {};
+      const order = [];
+      rows.forEach(r=>{
+        if(!groups[r.id]){ groups[r.id] = []; order.push(r.id); }
+        groups[r.id].push(r);
+      });
+
       tbody.innerHTML = '';
-      registrations.forEach((r, idx)=>{
-        const total = (Number(r.guestCount)||0) + 1;
+      order.forEach((regId)=>{
+        const group = groups[regId];
+        const primary = group.find(x=>x.role==='本人') || group[0];
+        const companions = group.filter(x=>x.role==='攜伴').map(x=>x.name).filter(Boolean);
+        const total = group.length;
         const due = total * 1200;
-        const matched = payments.filter(p => p.phone === r.phone);
+        const matched = payments.filter(p => p.phone === primary.phone);
         const paidSum = matched.reduce((sum,p)=> sum + (Number(p.amount)||0), 0);
+
         let status;
-        if(r.paymethod === '現場付款'){
+        if(primary.paymethod === '現場付款'){
           status = currentLang==='en' ? '🪑 Pay on-site' : '🪑 待現場收款';
         } else if(matched.length === 0){
           status = currentLang==='en' ? '⏳ Awaiting transfer' : '⏳ 尚未回報匯款';
@@ -1276,20 +1314,25 @@
         } else {
           status = currentLang==='en' ? '⚠️ Needs review' : '⚠️ 待人工確認';
         }
-        const tableWith = [r.tableWithName, r.tableWithIg, r.tableWithPhone].filter(Boolean).join(' / ') || '—';
+
+        const tableWith = [primary.tableWithName, primary.tableWithIg, primary.tableWithPhone].filter(Boolean).join(' / ') || '—';
+        const nameCell = companions.length
+          ? `${escapeHtml(primary.name)} <span style="color:var(--text-muted);">(+${escapeHtml(companions.join('、'))})</span>`
+          : escapeHtml(primary.name);
+
         const tr = document.createElement('tr');
         tr.innerHTML = `
-          <td>${idx+1}</td>
-          <td>${escapeHtml(r.name)}</td>
-          <td>${escapeHtml(r.phone)}</td>
-          <td>${r.guestCount||0}</td>
+          <td>${escapeHtml(regId)}</td>
+          <td>${nameCell}</td>
+          <td>${escapeHtml(primary.phone)}</td>
+          <td>${companions.length}</td>
           <td>${total}</td>
           <td>NT$${due.toLocaleString()}</td>
-          <td>${escapeHtml(r.paymethod)}</td>
+          <td>${escapeHtml(primary.paymethod)}</td>
           <td>${matched.length ? 'NT$'+paidSum.toLocaleString() : '—'}</td>
           <td>${status}</td>
           <td>${escapeHtml(tableWith)}</td>
-          <td>${r.igPublic === '是' ? (currentLang==='en'?'Yes':'是') : (currentLang==='en'?'No':'否')}</td>
+          <td>${primary.igPublic === '是' ? (currentLang==='en'?'Yes':'是') : (currentLang==='en'?'No':'否')}</td>
         `;
         tbody.appendChild(tr);
       });
