@@ -581,8 +581,9 @@
       </div>
 
       <div class="field">
-        <label for="su-ig" data-i18n="field_ig">Instagram 帳號（建議填寫，以利匯款對帳有需要時聯繫）</label>
-        <input type="text" id="su-ig" placeholder="@your_ig">
+        <label for="su-ig" data-i18n="field_ig">Instagram 帳號</label>
+        <input type="text" id="su-ig" placeholder="@your_ig" required>
+        <div class="hint" data-i18n="field_ig_hint">※務必填寫，以利匯款或對帳有誤時聯繫</div>
       </div>
       <div class="toggle-row">
         <input type="checkbox" id="su-ig-public">
@@ -657,7 +658,7 @@
         <input type="tel" id="lk-query" required>
         <div class="hint" data-i18n="lookup_hint">請輸入報名時填寫的聯絡電話進行查詢</div>
       </div>
-      <button type="submit" class="btn-primary" data-i18n="lookup_submit">查詢狀態</button>
+      <button type="submit" class="btn-primary" id="lookup-submit-btn" data-i18n="lookup_submit">查詢狀態</button>
       <div class="form-msg" id="lookup-msg" data-i18n="lookup_msg">查無資料，請確認電話輸入是否正確，或聯繫主辦單位協助查詢。</div>
     </form>
   </section>
@@ -894,7 +895,8 @@
     toggle_signup:{en:'Register'}, toggle_lookup:{en:'Check Status'},
     field_name:{en:'Name'}, field_country:{en:'Country'}, field_email:{en:'Email'},
     field_phone:{en:'Phone'}, field_phone_hint:{en:'※ You\'ll use this phone number to check your registration status later — please make sure it\'s correct'},
-    field_ig:{en:'Instagram Handle (recommended — helps us reach you if there\'s a payment question)'},
+    field_ig:{en:'Instagram Handle'},
+    field_ig_hint:{en:'※ Required — helps us reach you if there\'s a payment or reconciliation issue'},
     field_ig_public:{en:'Make my IG handle visible to other guests'},
     field_ig_public_sub:{en:'If checked, your IG handle may be shown to other registered guests'},
     guest_label:{en:'Plus-ones (not including yourself, up to 9, 10 people max total)'},
@@ -915,6 +917,7 @@
     signup_error:{en:'Please fill in all required fields (name, country, email, phone) and check the agreement box before submitting'},
     lookup_field:{en:'Phone Number'}, lookup_hint:{en:'Enter the phone number you used when registering'},
     lookup_submit:{en:'Check Status'},
+    lookup_submitting:{en:'Checking…'},
     lookup_msg:{en:'No record found — please double check your phone number, or contact the organizer for help.'},
     payment_title:{en:'Payment'}, payment_desc:{en:'After registering, please transfer using the details below and report your transfer for verification.'},
     qr_caption:{en:'Sample payment QR code — replace with your actual receiving QR code'},
@@ -1249,12 +1252,18 @@
     const msg = document.getElementById('lookup-msg');
     msg.classList.remove('show');
 
+    const lookupBtn = document.getElementById('lookup-submit-btn');
+    lookupBtn.disabled = true;
+    lookupBtn.textContent = currentLang === 'en' ? I18N.lookup_submitting.en : '查詢中…';
+
     if(!GAS_URL){
       msg.textContent = currentLang === 'en'
         ? 'No record found — please double check your phone number, or contact the organizer for help.'
         : '查無資料，請確認電話輸入是否正確，或聯繫主辦單位協助查詢。';
       msg.classList.add('show');
       setTimeout(()=> msg.classList.remove('show'), 6000);
+      lookupBtn.disabled = false;
+      lookupBtn.textContent = currentLang === 'en' ? I18N.lookup_submit.en : '查詢狀態';
       return;
     }
 
@@ -1285,6 +1294,9 @@
     }
     msg.classList.add('show');
     setTimeout(()=> msg.classList.remove('show'), 12000);
+
+    lookupBtn.disabled = false;
+    lookupBtn.textContent = currentLang === 'en' ? I18N.lookup_submit.en : '查詢狀態';
   });
 
   // ---- admin: password gate + live data (when GAS_URL is set) ----
