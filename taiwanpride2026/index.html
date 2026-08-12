@@ -426,6 +426,10 @@
     display:flex; align-items:center; justify-content:center;
     color:var(--text-muted); font-size:0.75rem; padding:14px; text-align:center;
   }
+  .line-modal-note{
+    font-size:0.85rem; font-weight:600; color:var(--yellow);
+    margin:0 0 20px !important; line-height:1.5;
+  }
 </style>
 </head>
 <body>
@@ -577,7 +581,7 @@
       </div>
 
       <div class="field">
-        <label for="su-ig" data-i18n="field_ig">Instagram 帳號（選填）</label>
+        <label for="su-ig" data-i18n="field_ig">Instagram 帳號（建議填寫，以利匯款對帳有需要時聯繫）</label>
         <input type="text" id="su-ig" placeholder="@your_ig">
       </div>
       <div class="toggle-row">
@@ -854,6 +858,7 @@
     <h3 data-i18n="line_modal_title">歡迎加入 Taiwan Pride！</h3>
     <p data-i18n="line_modal_desc">掃描下方 QR Code 加入 LINE 社群，掌握活動最新消息</p>
     <div class="line-qr-box" data-i18n="line_modal_ph">LINE 群組 QR Code 預留區，之後請替換成實際圖片</div>
+    <p class="line-modal-note" data-i18n="line_modal_note">務必加入活動群組，接收最新公告或詢問相關問題</p>
     <button class="btn-primary" id="line-modal-ok" data-i18n="line_modal_close_btn">知道了</button>
   </div>
 </div>
@@ -889,7 +894,7 @@
     toggle_signup:{en:'Register'}, toggle_lookup:{en:'Check Status'},
     field_name:{en:'Name'}, field_country:{en:'Country'}, field_email:{en:'Email'},
     field_phone:{en:'Phone'}, field_phone_hint:{en:'※ You\'ll use this phone number to check your registration status later — please make sure it\'s correct'},
-    field_ig:{en:'Instagram Handle (optional)'},
+    field_ig:{en:'Instagram Handle (recommended — helps us reach you if there\'s a payment question)'},
     field_ig_public:{en:'Make my IG handle visible to other guests'},
     field_ig_public_sub:{en:'If checked, your IG handle may be shown to other registered guests'},
     guest_label:{en:'Plus-ones (not including yourself, up to 9, 10 people max total)'},
@@ -949,6 +954,7 @@
     line_modal_title:{en:'Welcome to Taiwan Pride!'},
     line_modal_desc:{en:'Scan the QR code below to join our LINE group and get event updates'},
     line_modal_ph:{en:'LINE group QR code placeholder — replace with the real image'},
+    line_modal_note:{en:'Be sure to join the event group for the latest announcements or to ask questions'},
     line_modal_close_btn:{en:'Got it'}
   };
 
@@ -1257,9 +1263,18 @@
       const data = await res.json();
       if(data.found){
         const total = Number(data.totalCount) || 1;
+        const methodText = data.paymethod === '現場付款'
+          ? (currentLang==='en' ? 'on-site' : '現場付款')
+          : (currentLang==='en' ? 'online' : '線上付款');
+        const statusText = {
+          '已核對': currentLang==='en' ? '✅ Payment confirmed' : '✅ 已確認收到您的付款',
+          '尚未回報匯款': currentLang==='en' ? '⏳ We haven\'t received your transfer report yet — please complete it on the Payment tab' : '⏳ 尚未收到您的匯款回報，請至「匯款轉帳」頁面完成回報',
+          '待現場收款': currentLang==='en' ? '🪑 Please pay on-site on the day' : '🪑 請於活動當天現場付款',
+          '待人工確認': currentLang==='en' ? '⚠️ Amount mismatch — the organizer will contact you to confirm' : '⚠️ 金額對不上，主辦單位將盡快與您聯繫確認'
+        }[data.status] || '';
         msg.textContent = currentLang === 'en'
-          ? `✅ Found — ${data.name}, party of ${total}, payment: ${data.paymethod === '現場付款' ? 'on-site' : 'online'}.`
-          : `✅ 查到囉 — ${data.name}，共 ${total} 人，付款方式：${data.paymethod}。`;
+          ? `✅ Found — ${data.name}, party of ${total}, payment: ${methodText}. ${statusText}`
+          : `✅ 查到囉 — ${data.name}，共 ${total} 人，付款方式：${methodText}。${statusText}`;
       } else {
         msg.textContent = currentLang === 'en'
           ? 'No record found — please double check your phone number, or contact the organizer for help.'
@@ -1269,7 +1284,7 @@
       msg.textContent = currentLang === 'en' ? 'Lookup failed — please try again later.' : '查詢發生問題，請稍後再試。';
     }
     msg.classList.add('show');
-    setTimeout(()=> msg.classList.remove('show'), 8000);
+    setTimeout(()=> msg.classList.remove('show'), 12000);
   });
 
   // ---- admin: password gate + live data (when GAS_URL is set) ----
