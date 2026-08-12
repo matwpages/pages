@@ -283,6 +283,7 @@
     transition:transform .15s ease;
   }
   .btn-primary:hover{transform:translateY(-1px);}
+  .btn-primary:disabled{opacity:0.65; cursor:not-allowed; transform:none;}
   .btn-secondary{
     padding:9px 14px; border-radius:10px;
     background:transparent; color:var(--text-light); border:1px solid var(--line);
@@ -637,7 +638,7 @@
         <label for="su-agree" data-i18n="agree_label">我已閱讀並同意「活動訊息」頁面中的注意事項</label>
       </div>
 
-      <button type="submit" class="btn-primary" data-i18n="signup_submit">送出報名</button>
+      <button type="submit" class="btn-primary" id="signup-submit-btn" data-i18n="signup_submit">送出報名</button>
       <div class="form-msg" id="signup-msg" data-i18n="signup_msg">🎉 報名已送出！若選擇線上付款，請至「匯款轉帳」分頁完成付款並回報轉帳資訊。</div>
       <div class="form-msg" id="signup-error" style="background:rgba(255,75,92,0.15); border-color:var(--red); color:var(--red);" data-i18n="signup_error">請完整填寫必填欄位（姓名、國籍、Email、電話），並勾選同意注意事項後再送出</div>
     </form>
@@ -738,7 +739,7 @@
         <label for="pay-date" data-i18n="pay_date_label">匯款日期</label>
         <input type="date" id="pay-date" required>
       </div>
-      <button type="submit" class="btn-primary" data-i18n="pay_submit">回報轉帳資訊</button>
+      <button type="submit" class="btn-primary" id="payment-submit-btn" data-i18n="pay_submit">回報轉帳資訊</button>
       <div class="form-msg" id="payment-msg" data-i18n="pay_msg">✅ 已收到你的轉帳回報，我們會盡快核對並更新報名狀態。</div>
     </form>
   </section>
@@ -895,6 +896,7 @@
     notice_recap_summary:{en:'📋 Review the notes again'},
     agree_label:{en:'I have read and agree to the notes on the Event Info page'},
     signup_submit:{en:'Submit Registration'},
+    signup_submitting:{en:'Submitting…'},
     signup_msg:{en:'🎉 Registration submitted! If you chose to pay online, please go to the Payment tab to complete payment and report your transfer.'},
     signup_error:{en:'Please fill in all required fields (name, country, email, phone) and check the agreement box before submitting'},
     lookup_field:{en:'Phone Number'}, lookup_hint:{en:'Enter the phone number you used when registering'},
@@ -908,6 +910,7 @@
     pay_phone_hint:{en:'Please use the same phone number as your registration so we can match it automatically'},
     pay_last5_label:{en:'Last 5 Digits'}, pay_amount_label:{en:'Amount'}, pay_date_label:{en:'Transfer Date'},
     pay_submit:{en:'Report Transfer'},
+    pay_submitting:{en:'Submitting…'},
     pay_msg:{en:'✅ Your transfer report has been received — we\'ll verify it and update your status soon.'},
     gallery_title:{en:'Gallery'}, gallery_desc:{en:'Event photos will be posted here after the event.'},
     gallery_empty:{en:'The event hasn\'t happened yet — photo slots are reserved here for later'},
@@ -1154,6 +1157,10 @@
     }
     errorEl.classList.remove('show');
 
+    const submitBtn = document.getElementById('signup-submit-btn');
+    submitBtn.disabled = true;
+    submitBtn.textContent = currentLang === 'en' ? I18N.signup_submitting.en : '處理中…';
+
     const guests = Array.from(guestRowsContainer.querySelectorAll('.guest-row')).map(row=>({
       name: row.querySelector('.guest-name-input').value.trim(),
       country: row.querySelector('.guest-country-input').value.trim(),
@@ -1187,11 +1194,18 @@
     guestRowsContainer.innerHTML = '';
     guestCount = 0;
     updateGuestHint();
+
+    submitBtn.disabled = false;
+    submitBtn.textContent = currentLang === 'en' ? I18N.signup_submit.en : '送出報名';
   });
 
   // ---- payment form ----
   document.getElementById('payment-form').addEventListener('submit', async (e)=>{
     e.preventDefault();
+    const submitBtn = document.getElementById('payment-submit-btn');
+    submitBtn.disabled = true;
+    submitBtn.textContent = currentLang === 'en' ? I18N.pay_submitting.en : '處理中…';
+
     const payload = {
       type: 'payment',
       id: 'pay-' + Date.now() + '-' + Math.random().toString(36).slice(2,7),
@@ -1207,6 +1221,9 @@
     msg.classList.add('show');
     setTimeout(()=> msg.classList.remove('show'), 6000);
     document.getElementById('payment-form').reset();
+
+    submitBtn.disabled = false;
+    submitBtn.textContent = currentLang === 'en' ? I18N.pay_submit.en : '回報轉帳資訊';
   });
 
   // ---- lookup form ----
