@@ -205,6 +205,9 @@
   @media(max-width:560px){.field-row.three-col{grid-template-columns:1fr;}}
   .hint{font-size:0.78rem; color:var(--text-muted); margin-top:5px;}
   .hint.warn{color:var(--orange);}
+  .hint.critical{
+    font-size:0.85rem; font-weight:700; color:var(--red); margin-top:6px;
+  }
 
   .toggle-row{
     display:flex; align-items:center; gap:10px;
@@ -430,6 +433,14 @@
     font-size:0.85rem; font-weight:600; color:var(--yellow);
     margin:0 0 20px !important; line-height:1.5;
   }
+  .line-regid{
+    display:inline-block; margin:0 auto 10px; padding:8px 16px;
+    background:var(--bg-surface-2); border:1px solid var(--purple); border-radius:10px;
+    font-family:'Baloo 2'; font-weight:700; font-size:1rem; color:var(--text-light);
+  }
+  .line-regid-hint{
+    font-size:0.78rem; color:var(--text-muted); margin:0 0 16px !important;
+  }
 </style>
 </head>
 <body>
@@ -576,7 +587,7 @@
         <div class="field">
           <label for="su-phone" data-i18n="field_phone">聯絡電話</label>
           <input type="tel" id="su-phone" required>
-          <div class="hint" data-i18n="field_phone_hint">※查詢報名狀態會用這組電話，請確認填寫正確</div>
+          <div class="hint critical" data-i18n="field_phone_hint">※查詢報名狀態及付款詳情會用到這組電話，請務必確認填寫正確</div>
         </div>
       </div>
 
@@ -731,7 +742,7 @@
         <div class="field">
           <label for="pay-phone" data-i18n="pay_phone_label">聯絡電話</label>
           <input type="tel" id="pay-phone" required>
-          <div class="hint" data-i18n="pay_phone_hint">請務必填寫報名時所使用的電話，方便後台自動比對</div>
+          <div class="hint critical" data-i18n="pay_phone_hint">※請務必填寫報名時所使用的聯絡電話，方便後台自動比對名單</div>
         </div>
       </div>
       <div class="field-row">
@@ -747,6 +758,11 @@
       <div class="field">
         <label for="pay-date" data-i18n="pay_date_label">匯款日期</label>
         <input type="date" id="pay-date" required>
+      </div>
+      <div class="field">
+        <label for="pay-regid" data-i18n="pay_regid_label">報名編號（選填）</label>
+        <input type="text" id="pay-regid" placeholder="例：TP005">
+        <div class="hint" data-i18n="pay_regid_hint">如果知道你的報名編號，填在這裡可以讓對帳更準確（報名成功時彈窗有顯示）</div>
       </div>
       <button type="submit" class="btn-primary" id="payment-submit-btn" data-i18n="pay_submit">回報轉帳資訊</button>
       <div class="form-msg" id="payment-msg" data-i18n="pay_msg">✅ 已收到你的轉帳回報，我們會盡快核對並更新報名狀態。</div>
@@ -810,7 +826,8 @@
         <ol>
           <li data-i18n="admin_logic_1">報名表與匯款回報表都收「聯絡電話」，系統以電話做為配對鍵，把兩張表自動連起來</li>
           <li data-i18n="admin_logic_2">應付金額 = （攜伴人數 + 1）× NT$1,200，由報名資料自動算出</li>
-          <li data-i18n="admin_logic_3">匯款回報進來後，比對「匯款金額」是否等於「應付金額」：金額相符 → 自動標記「已核對」；金額不符或找不到對應電話 → 標記「待人工確認」，方便工作人員手動處理</li>
+          <li data-i18n="admin_logic_3">匯款回報進來後，比對「匯款金額」是否等於「應付金額」：金額相符 → 標記「已回報，待銀行核實」；金額不符或找不到對應電話 → 標記「待人工確認」</li>
+          <li data-i18n="admin_logic_3b">系統比對相符，不代表錢真的到帳——請實際去銀行帳戶核對這筆匯款後，到「匯款回報」分頁把該筆的「銀行已核實」欄位填「是」，狀態才會變成「已核對（銀行已核實）」</li>
           <li data-i18n="admin_logic_4">現場付款者不需匯款比對，總人數超過2人者已限制僅能線上付款；現場付款者活動當天工作人員收款後手動勾選「已收款」</li>
           <li data-i18n="admin_logic_5">每筆新報名或新匯款回報送出時，後台清單自動新增一列，不需手動增加欄位</li>
         </ol>
@@ -858,6 +875,8 @@
     <div class="modal-icon">🎉</div>
     <h3 data-i18n="line_modal_title">歡迎加入 Taiwan Pride！</h3>
     <p data-i18n="line_modal_desc">掃描下方 QR Code 加入 LINE 社群，掌握活動最新消息</p>
+    <div class="line-regid" id="line-modal-regid" style="display:none;"></div>
+    <p class="line-regid-hint" id="line-modal-regid-hint" style="display:none;" data-i18n="line_modal_regid_hint">回報匯款時填上這組編號，可以讓對帳更準確</p>
     <div class="line-qr-box" data-i18n="line_modal_ph">LINE 群組 QR Code 預留區，之後請替換成實際圖片</div>
     <p class="line-modal-note" data-i18n="line_modal_note">務必加入活動群組，接收最新公告或詢問相關問題</p>
     <button class="btn-primary" id="line-modal-ok" data-i18n="line_modal_close_btn">知道了</button>
@@ -894,7 +913,7 @@
     register_desc:{en:'Fill out the form to register, or look up your status using the phone number you registered with.'},
     toggle_signup:{en:'Register'}, toggle_lookup:{en:'Check Status'},
     field_name:{en:'Name'}, field_country:{en:'Country'}, field_email:{en:'Email'},
-    field_phone:{en:'Phone'}, field_phone_hint:{en:'※ You\'ll use this phone number to check your registration status later — please make sure it\'s correct'},
+    field_phone:{en:'Phone'}, field_phone_hint:{en:'※ This phone number is used to check your registration status and payment details — please make sure it\'s correct'},
     field_ig:{en:'Instagram Handle'},
     field_ig_hint:{en:'※ Required — helps us reach you if there\'s a payment or reconciliation issue'},
     field_ig_public:{en:'Make my IG handle visible to other guests'},
@@ -924,8 +943,10 @@
     bank_name_label:{en:'Bank'}, bank_branch_label:{en:'Branch'}, bank_branch_value:{en:'Head Office'},
     bank_holder_label:{en:'Account Name'}, bank_acct_label:{en:'Account No.'}, copy_btn:{en:'Copy'},
     pay_name_label:{en:'Payer Name'}, pay_phone_label:{en:'Phone'},
-    pay_phone_hint:{en:'Please use the same phone number as your registration so we can match it automatically'},
+    pay_phone_hint:{en:'※ Please use the exact same phone number as your registration so the system can match it automatically'},
     pay_last5_label:{en:'Last 5 Digits'}, pay_amount_label:{en:'Amount'}, pay_date_label:{en:'Transfer Date'},
+    pay_regid_label:{en:'Registration Number (optional)'},
+    pay_regid_hint:{en:'If you know your registration number, enter it here for more accurate matching (shown in the popup after you registered)'},
     pay_submit:{en:'Report Transfer'},
     pay_submitting:{en:'Submitting…'},
     pay_msg:{en:'✅ Your transfer report has been received — we\'ll verify it and update your status soon.'},
@@ -945,7 +966,8 @@
     admin_logic_title:{en:'Auto-Reconciliation Logic'},
     admin_logic_1:{en:'Both the registration form and the transfer report collect "phone number" — the system uses phone number as the matching key to link the two sheets'},
     admin_logic_2:{en:'Amount due = (number of plus-ones + 1) × NT$1,200, calculated automatically from registration data'},
-    admin_logic_3:{en:'When a transfer report comes in, the system checks whether the reported amount matches the amount due: if it matches → auto-flag as "Verified"; if it doesn\'t match or no matching phone number is found → flag as "Needs manual review" for staff to handle'},
+    admin_logic_3:{en:'When a transfer report comes in, the system checks whether the reported amount matches the amount due: if it matches → flag as "Reported, pending bank check"; if it doesn\'t match or no matching phone number is found → flag as "Needs manual review"'},
+    admin_logic_3b:{en:'A system match doesn\'t mean the money has actually arrived — please check the transfer against the real bank statement, then mark "銀行已核實" (bank verified) as "是" for that row in the "匯款回報" tab. Only then does the status become "Verified (bank checked)"'},
     admin_logic_4:{en:'On-site payers skip transfer matching; groups over 2 people are already restricted to online payment only. For on-site payers, staff manually check "Paid" after collecting payment on the day'},
     admin_logic_5:{en:'Each new registration or transfer report automatically adds a new row — no need to add columns manually'},
     admin_th_id:{en:'Reg. ID'}, admin_th_name:{en:'Name'}, admin_th_phone:{en:'Phone'},
@@ -958,6 +980,7 @@
     line_modal_desc:{en:'Scan the QR code below to join our LINE group and get event updates'},
     line_modal_ph:{en:'LINE group QR code placeholder — replace with the real image'},
     line_modal_note:{en:'Be sure to join the event group for the latest announcements or to ask questions'},
+    line_modal_regid_hint:{en:'Enter this number when you report your payment — it helps us match things up accurately'},
     line_modal_close_btn:{en:'Got it'}
   };
 
@@ -1081,9 +1104,9 @@
   }
   function guestFieldPh(kind){
     if(currentLang === 'en'){
-      return kind==='name' ? 'Name' : kind==='country' ? 'Country' : 'IG (optional)';
+      return kind==='name' ? 'Name' : kind==='country' ? 'Country' : 'IG';
     }
-    return kind==='name' ? '姓名' : kind==='country' ? '國籍' : 'IG（選填）';
+    return kind==='name' ? '姓名' : kind==='country' ? '國籍' : 'IG';
   }
   function addGuestRow(){
     if(guestCount >= maxGuests) return;
@@ -1096,9 +1119,9 @@
         <button type="button" class="btn-secondary remove-guest-btn">${removeLabelText()}</button>
       </div>
       <div class="guest-row-fields">
-        <input type="text" class="guest-name-input" placeholder="${guestFieldPh('name')}">
-        <input type="text" class="guest-country-input" placeholder="${guestFieldPh('country')}">
-        <input type="text" class="guest-ig-input" placeholder="${guestFieldPh('ig')}">
+        <input type="text" class="guest-name-input" placeholder="${guestFieldPh('name')}" required>
+        <input type="text" class="guest-country-input" placeholder="${guestFieldPh('country')}" required>
+        <input type="text" class="guest-ig-input" placeholder="${guestFieldPh('ig')}" required>
       </div>
     `;
     guestRowsContainer.appendChild(row);
@@ -1141,7 +1164,20 @@
 
   // ---- LINE group QR modal ----
   const lineModal = document.getElementById('line-modal');
-  function openLineModal(){ lineModal.style.display = 'flex'; }
+  function openLineModal(regId){
+    const regEl = document.getElementById('line-modal-regid');
+    const hintEl = document.getElementById('line-modal-regid-hint');
+    if(regId){
+      const label = currentLang === 'en' ? 'Your registration number: ' : '你的報名編號：';
+      regEl.textContent = label + regId;
+      regEl.style.display = 'inline-block';
+      hintEl.style.display = 'block';
+    } else {
+      regEl.style.display = 'none';
+      hintEl.style.display = 'none';
+    }
+    lineModal.style.display = 'flex';
+  }
   function closeLineModal(){ lineModal.style.display = 'none'; }
   document.getElementById('line-modal-close').addEventListener('click', closeLineModal);
   document.getElementById('line-modal-ok').addEventListener('click', closeLineModal);
@@ -1150,12 +1186,14 @@
   async function postToBackend(payload){
     if(!GAS_URL) return { ok:false, reason:'no-url' };
     try{
-      await fetch(GAS_URL, {
+      const res = await fetch(GAS_URL, {
         method:'POST',
         headers:{ 'Content-Type':'text/plain;charset=utf-8' }, // avoids CORS preflight with Apps Script
         body: JSON.stringify(payload)
       });
-      return { ok:true };
+      let body = null;
+      try{ body = await res.json(); }catch(e){ /* 讀不到就算了，不影響主流程 */ }
+      return { ok:true, body: body };
     }catch(err){
       console.error('Backend POST failed', err);
       return { ok:false, reason:'network' };
@@ -1202,12 +1240,13 @@
       tableWithPhone: document.getElementById('su-tablewith-phone').value.trim(),
       paymethod: document.querySelector('input[name="paymethod"]:checked').value
     };
-    await postToBackend(payload);
+    const backendResult = await postToBackend(payload);
+    const assignedRegId = (backendResult.body && backendResult.body.id) ? backendResult.body.id : '';
 
     const msg = document.getElementById('signup-msg');
     msg.classList.add('show');
     setTimeout(()=> msg.classList.remove('show'), 6000);
-    openLineModal();
+    openLineModal(assignedRegId);
 
     signupForm.reset();
     guestRowsContainer.innerHTML = '';
@@ -1232,7 +1271,8 @@
       phone: document.getElementById('pay-phone').value.trim(),
       last5: document.getElementById('pay-last5').value.trim(),
       amount: Number(document.getElementById('pay-amount').value) || 0,
-      date: document.getElementById('pay-date').value
+      date: document.getElementById('pay-date').value,
+      regId: document.getElementById('pay-regid').value.trim()
     };
     await postToBackend(payload);
 
@@ -1276,7 +1316,9 @@
           ? (currentLang==='en' ? 'on-site' : '現場付款')
           : (currentLang==='en' ? 'online' : '線上付款');
         const statusText = {
-          '已核對': currentLang==='en' ? '✅ Payment confirmed' : '✅ 已確認收到您的付款',
+          '已核對（銀行已核實）': currentLang==='en' ? '✅ Payment confirmed' : '✅ 已確認收到您的付款',
+          '已核對（人工標記）': currentLang==='en' ? '✅ Payment confirmed' : '✅ 已確認收到您的付款',
+          '已回報，待銀行核實': currentLang==='en' ? '\u{1F440} We\'ve received your transfer report — the organizer is confirming it against the bank statement' : '\u{1F440} 已收到你的匯款回報，主辦單位正在核對銀行帳戶確認中',
           '尚未回報匯款': currentLang==='en' ? '⏳ We haven\'t received your transfer report yet — please complete it on the Payment tab' : '⏳ 尚未收到您的匯款回報，請至「匯款轉帳」頁面完成回報',
           '待現場收款': currentLang==='en' ? '🪑 Please pay on-site on the day' : '🪑 請於活動當天現場付款',
           '待人工確認': currentLang==='en' ? '⚠️ Amount mismatch — the organizer will contact you to confirm' : '⚠️ 金額對不上，主辦單位將盡快與您聯繫確認'
@@ -1345,7 +1387,9 @@
       const statusLabels = {
         '待現場收款': currentLang==='en' ? '🪑 Pay on-site' : '🪑 待現場收款',
         '尚未回報匯款': currentLang==='en' ? '⏳ Awaiting transfer' : '⏳ 尚未回報匯款',
-        '已核對': currentLang==='en' ? '✅ Verified' : '✅ 已核對',
+        '已回報，待銀行核實': currentLang==='en' ? '\u{1F440} Reported, pending bank check' : '\u{1F440} 已回報，待銀行核實',
+        '已核對（銀行已核實）': currentLang==='en' ? '✅ Verified (bank checked)' : '✅ 已核對（銀行已核實）',
+        '已核對（人工標記）': currentLang==='en' ? '✅ Verified (manual)' : '✅ 已核對（人工標記）',
         '待人工確認': currentLang==='en' ? '⚠️ Needs review' : '⚠️ 待人工確認'
       };
 
@@ -1355,12 +1399,15 @@
         const nameCell = companions.length
           ? `${escapeHtml(r.name)} <span style="color:var(--text-muted);">(+${escapeHtml(companions.join('、'))})</span>`
           : escapeHtml(r.name);
+        const phoneCell = r.phoneShared
+          ? `${escapeHtml(r.phone)} <span title="${currentLang==='en'?'This phone number is used by more than one registration':'這支電話被多組報名使用'}" style="color:var(--orange);">⚠️</span>`
+          : escapeHtml(r.phone);
 
         const tr = document.createElement('tr');
         tr.innerHTML = `
           <td>${escapeHtml(r.regId)}</td>
           <td>${nameCell}</td>
-          <td>${escapeHtml(r.phone)}</td>
+          <td>${phoneCell}</td>
           <td>${r.companionCount||0}</td>
           <td>${r.total}</td>
           <td>NT$${r.due.toLocaleString()}</td>
